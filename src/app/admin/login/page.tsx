@@ -1,4 +1,3 @@
-// src/app/login/page.tsx
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -7,14 +6,34 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Contoh: validasi sederhana
-    if (email === "admin@dispusipda.go.id" && password === "admin123") {
-      router.push("/dashboard"); // redirect ke dashboard
-    } else {
-      alert("Email atau password salah!");
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || "Login gagal");
+        setLoading(false);
+        return;
+      }
+
+      alert("Login berhasil!");
+      router.push("/admin/dashboard");
+    } catch (error) {
+      alert("Terjadi kesalahan koneksi");
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,9 +75,12 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white py-2 rounded-lg font-semibold hover:bg-blue-700 transition"
+            disabled={loading}
+            className={`w-full ${
+              loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
+            } text-white py-2 rounded-lg font-semibold transition`}
           >
-            Masuk
+            {loading ? "Memproses..." : "Masuk"}
           </button>
         </form>
 
