@@ -1,51 +1,57 @@
 "use client";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+
+import Sidebar from "../component/sidebar";
+import RecentOrders from "../component/recentorder";
+import Chart from "../component/chart";
+import DashboardStats from "../component/stats";
+import Image from "next/image";
+
+import { Menu } from "lucide-react";
+import { useState } from "react";
 
 export default function DashboardPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    // contoh sederhana: kalau belum login, redirect ke login
-    const loggedIn = localStorage.getItem("loggedIn");
-    if (!loggedIn) {
-      router.push("/admin/dashboard");
-    }
-  }, [router]);
-
-  const handleLogout = () => {
-    localStorage.removeItem("loggedIn");
-    router.push("/admin/login");
-  };
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex flex-col items-center justify-center">
-      <div className="bg-white shadow-lg rounded-2xl p-8 max-w-lg w-full text-center">
-        <h1 className="text-3xl font-bold text-blue-600 mb-4">
-          Dashboard Admin
-        </h1>
-        <p className="text-gray-700 mb-8">
-          Selamat datang di halaman Dashboard DISPUSIPDA Jawa Barat 🎉
-        </p>
+    <div className="flex min-h-screen bg-slate-50 text-slate-900">
+      {/* Sidebar */}
+      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
-        <div className="space-x-4">
+      {/* Main Content */}
+      <div className="flex-1 md:ml-0 p-6 space-y-8 w-full">
+        {/* Top Bar */}
+        <div className="flex justify-between items-center">
           <button
-            onClick={() => alert("Lihat Data Pengguna")}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="md:hidden p-2 border rounded-lg hover:bg-slate-100"
           >
-            Lihat Data
+            <Menu className="w-5 h-5" />
           </button>
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 bg-gray-300 rounded-lg hover:bg-gray-400 transition"
-          >
-            Logout
-          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-800">
+              Dashboard Overview
+            </h1>
+            <p className="text-sm text-slate-500 mt-1">
+              Welcome back, here&apos;s what&apos;s happening today
+            </p>
+          </div>
+          <Image
+            src="/profile.svg"
+            alt="Profile"
+            width={40}
+            height={40}
+            className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-500"
+          />
         </div>
 
-        <p className="text-sm text-gray-400 mt-8">
-          © 2025 DISPUSIPDA Jawa Barat
-        </p>
+        {/* Stats Section */}
+
+        <DashboardStats />
+        {/* Chart Section */}
+        <Chart />
+
+        {/* Recent Orders Table */}
+        <RecentOrders />
       </div>
     </div>
   );
