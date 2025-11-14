@@ -120,3 +120,11 @@
     @apply bg-background text-foreground;
   }
 }
+
+.dashboard-title {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  font-weight: 600;
+  font-style: normal;
+  vertical-align: middle;
+  color: #3f5e84;
+}

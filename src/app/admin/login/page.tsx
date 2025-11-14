@@ -1,76 +1,119 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import Image from "next/image";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
+  const [showPassword, setShowPassword] = useState(false);
+
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [alert, setAlert] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setAlert(null);
 
-    try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+    const result = await signIn("credentials", {
+      redirect: false,
+      email,
+      password,
+    });
+
+    if (result?.error) {
+      setAlert({
+        type: "error",
+        message: "Email atau password salah!",
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert(data.message || "Login gagal");
-        setLoading(false);
-        return;
-      }
-
-      alert("Login berhasil!");
-      router.push("/admin/dashboard");
-    } catch (error) {
-      alert("Terjadi kesalahan koneksi");
-      console.error(error);
-    } finally {
       setLoading(false);
+      return;
     }
+
+    setAlert({
+      type: "success",
+      message: "Login berhasil! Mengalihkan...",
+    });
+
+    setTimeout(() => {
+      router.push("/admin/dashboard");
+    }, 1500);
+
+    setLoading(false);
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-blue-100">
-      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center text-blue-600 mb-6">
-          Login Admin DISPUSIPDA
+    <div
+      className="flex items-center justify-center min-h-screen bg-cover bg-center"
+      style={{ backgroundImage: "url('/bg-login.jpg')" }}
+    >
+      <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-md relative overflow-hidden">
+        {alert && (
+          <div
+            className={`absolute top-0 left-0 w-full text-center py-3 text-sm font-medium ${
+              alert.type === "success"
+                ? "bg-blue-500 text-white"
+                : "bg-red-500 text-white"
+            }`}
+          >
+            {alert.message}
+          </div>
+        )}
+
+        <div className="flex justify-center mt-6 mb-4">
+          <Image
+            src="/Logo_Dispusipda.png"
+            alt="Logo"
+            width={150}
+            height={150}
+          />
+        </div>
+
+        <h1 className="text-2xl font-bold text-center text-gray-700 mb-6">
+          PERPUSTAKAAN DEPOSIT
         </h1>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 mt-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
+            <label className="block text-sm font-medium mb-1">Email</label>
             <input
               type="email"
               placeholder="Masukkan email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              type="password"
-              placeholder="Masukkan password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
-              required
-            />
+            <label className="block text-sm font-medium mb-1">Password</label>
+
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Masukkan password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400 pr-10"
+                required
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+              >
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+              </button>
+            </div>
           </div>
 
           <button
@@ -84,7 +127,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        <p className="text-center text-sm text-gray-500 mt-4">
+        <p className="text-center text-sm text-gray-500 mt-6">
           © 2025 DISPUSIPDA Jawa Barat
         </p>
       </div>

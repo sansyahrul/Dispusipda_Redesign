@@ -10,7 +10,110 @@ datasource db {
 model User {
   id        Int      @id @default(autoincrement())
   name      String
+  role      String?  @default("user")
   email     String   @unique
   password  String
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt  // ✅ ini aman & auto-update
 }
+
+
+
+
+model Content {
+  id               Int      @id @default(autoincrement())
+  judul_berita     String
+  icon             String?
+  tanggal_publish  DateTime
+  jam_publish      String
+  status_berita    String
+  jenis_berita     String
+  id_kategori      Int
+  urutan           Int
+  keywords         String?
+  isi              String? @db.LongText
+  gambar_url       String?
+  video_url        String?
+  dokumen_url      String?
+  youtube_link     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model profile {
+  id               Int      @id @default(autoincrement())
+  judul_profile    String
+  tanggal_publish  DateTime
+  jam_publish      String
+  jenis_berita     String
+  id_kategori      Int
+  isi              String? @db.LongText
+  gambar_url       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+}
+
+model hero_section {
+  id               Int      @id @default(autoincrement())
+  judul_section    String
+  tanggal_publish  DateTime
+  jam_publish      String
+  jenis_berita     String
+  id_kategori      Int
+  isi              String? @db.LongText
+  gambar_url       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+}
+
+model tujuan {
+  id               Int      @id @default(autoincrement())
+  judul_tujuan    String
+  tanggal_publish  DateTime
+  jam_publish      String
+  jenis_berita     String
+  id_kategori      Int
+  isi              String? @db.LongText
+  gambar_url       String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+}
+
+model undang_undang {
+  id               Int      @id @default(autoincrement())
+  judul_undang_undang    String
+  tanggal_publish  DateTime
+  jam_publish      String
+  jenis_berita     String
+  id_kategori      Int
+  isi              String? @db.LongText
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+}
+
+model Statistik {
+  id          Int      @id @default(autoincrement())
+  tahun       Int
+  karya_cetak Float
+  karya_rekam Float
+  total       Float
+  createdAt   DateTime @default(now())
+}
+
+model StatistikImport {
+  id        Int      @id @default(autoincrement())
+  data      Json
+  createdAt DateTime @default(now())
+}
+
+model Serahsimpan {
+  id        Int      @id @default(autoincrement())
+  data      Json
+  createdAt DateTime @default(now())
+}
+
+
