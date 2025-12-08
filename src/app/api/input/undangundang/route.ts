@@ -39,19 +39,17 @@ export async function POST(req: NextRequest) {
 }
 
 // 🟢 READ
-export async function GET() {
-  try {
-    const data = await prisma.undang_undang.findMany({
-      orderBy: { id: "desc" },
-    });
-    return NextResponse.json(data, { status: 200 });
-  } catch (err) {
-    console.error("❌ Error GET:", err);
-    return NextResponse.json(
-      { error: "Gagal mengambil data undang-undang" },
-      { status: 500 }
-    );
-  }
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const kategori = searchParams.get("kategori");
+
+  const whereClause = kategori ? { id_kategori: Number(kategori) } : {};
+  const data = await prisma.undang_undang.findMany({
+    where: whereClause,
+    orderBy: { id: "desc" },
+  });
+
+  return NextResponse.json(data);
 }
 
 // 🟡 UPDATE (PUT)

@@ -12,7 +12,7 @@ import {
   ChartNoAxesColumnIncreasing,
   LogOut,
 } from "lucide-react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 
 const navItems = [
   { name: "Dashboard", icon: LayoutDashboard, path: "/admin/dashboard" },
@@ -28,6 +28,10 @@ type SidebarProps = {
 export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
   const router = useRouter();
   const pathname = usePathname();
+
+  // Ambil role user dari session NextAuth
+  const { data: session } = useSession();
+  const role = session?.user?.role;
 
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
 
@@ -83,6 +87,13 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
               Perpustakaan Deposit
             </h2>
 
+            {/*  Nama user yang login */}
+            {session?.user && (
+              <p className="text-sm text-slate-600 mt-1">
+                {session.user.name} ({session.user.role})
+              </p>
+            )}
+
             <button
               className="md:hidden text-slate-500"
               onClick={() => setSidebarOpen(false)}
@@ -93,23 +104,31 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
 
           {/* Navigation */}
           <nav className="p-4 space-y-1">
-            {navItems.map((item) => {
-              const isActive = pathname === item.path;
-              return (
-                <button
-                  key={item.name}
-                  onClick={() => handleNavClick(item.path)}
-                  className={`flex items-center w-full text-left px-4 py-2.5 rounded-lg transition-all font-medium ${
-                    isActive
-                      ? "bg-[#E7EEF8] text-[#3F5E84]"
-                      : "text-slate-700 hover:bg-[#EFF4FB] hover:text-[#3F5E84]"
-                  }`}
-                >
-                  <item.icon className="w-5 h-5 mr-3" />
-                  {item.name}
-                </button>
-              );
-            })}
+            {navItems
+              .filter((item) => {
+                // ❗ FILTER MENU USERS: hanya superadmin yang boleh melihat
+                if (item.name === "Users" && role !== "superadmin")
+                  return false;
+                return true;
+              })
+              .map((item) => {
+                const isActive = pathname === item.path;
+
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => handleNavClick(item.path)}
+                    className={`flex items-center w-full text-left px-4 py-2.5 rounded-lg transition-all font-medium ${
+                      isActive
+                        ? "bg-[#E7EEF8] text-[#3F5E84]"
+                        : "text-slate-700 hover:bg-[#EFF4FB] hover:text-[#3F5E84]"
+                    }`}
+                  >
+                    <item.icon className="w-5 h-5 mr-3" />
+                    {item.name}
+                  </button>
+                );
+              })}
 
             {/* Statistik Koleksi */}
             <div className="pt-2">
@@ -201,7 +220,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
           </nav>
         </div>
 
-        {/* Logout di bawah */}
+        {/* Logout bawah */}
         <div className="p-4 border-t border-slate-200">
           <button
             onClick={() => signOut({ callbackUrl: "/admin/login" })}
@@ -213,7 +232,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }: SidebarProps) {
         </div>
       </aside>
 
-      {/* Overlay for mobile */}
+      {/* Overlay mobile */}
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}

@@ -1,0 +1,1 @@
+﻿positionForPages[4]={page:4,positions:[{word:"Contoh Teks Asli",left:0.429352,top:0.150703,width:0.197955,height:0.045053},{word:"(Redaksi suntingan teks berbentuk prosa",left:0.317007,top:0.198292,width:0.422387,height:0.038309},{word:"terdiri atas 23 alinea)",left:0.419375,top:0.238737,width:0.217870,height:0.038308}]};

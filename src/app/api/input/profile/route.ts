@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
+
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-
-const prisma = new PrismaClient();
 
 interface ProfilePayload {
   judul_profile: string;
@@ -14,39 +13,56 @@ interface ProfilePayload {
   isi: string;
 }
 
-// ============================
-// 📤 POST — Tambah Data Profile
-// ============================
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
 
-    const payload: ProfilePayload = {
-      judul_profile: formData.get("judul_profile") as string,
-      tanggal_publish: formData.get("tanggal_publish") as string,
-      jam_publish: formData.get("jam_publish") as string,
-      jenis_berita: formData.get("jenis_berita") as string,
-      id_kategori: formData.get("id_kategori") as string,
-      isi: (formData.get("isi") as string) ?? "",
-    };
+    // ambil file dari form-data "gambar"
+    const file = formData.get("gambar") as File | null;
 
-    // 🖼️ Upload Gambar
-    const gambar = formData.get("gambar") as File | null;
-    let gambar_url: string | null = null;
+    let media_url: string | null = null;
+    let media_type: string | null = null;
 
-    if (gambar) {
-      const bytes = await gambar.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const uploadDir = path.join(process.cwd(), "public/uploads");
+    if (file && file.size > 0) {
+      const mime = file.type;
 
+      // validasi file
+      if (!mime.startsWith("image/") && !mime.startsWith("video/")) {
+        return NextResponse.json(
+          { error: "File harus berupa gambar atau video" },
+          { status: 400 }
+        );
+      }
+
+      // lokasi penyimpanan
+      const uploadDir = path.join(process.cwd(), "public/uploads/profile");
       await mkdir(uploadDir, { recursive: true });
-      const filePath = path.join(uploadDir, gambar.name);
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+
+      // nama file aman
+      const extension = mime.split("/")[1];
+      const safeName = file.name.replace(/\s+/g, "_");
+      const fileName = `${Date.now()}_${safeName}`;
+
+      const filePath = path.join(uploadDir, fileName);
+
       await writeFile(filePath, buffer);
-      gambar_url = `/uploads/${gambar.name}`;
+
+      media_url = `/uploads/profile/${fileName}`;
+      media_type = mime.startsWith("video/") ? "video" : "image";
     }
 
-    // 💾 Simpan ke Database
-    const hero = await prisma.profile.create({
+    const payload: ProfilePayload = {
+      judul_profile: String(formData.get("judul_profile")),
+      tanggal_publish: String(formData.get("tanggal_publish")),
+      jam_publish: String(formData.get("jam_publish")),
+      jenis_berita: String(formData.get("jenis_berita")),
+      id_kategori: String(formData.get("id_kategori")),
+      isi: String(formData.get("isi")),
+    };
+
+    const result = await prisma.profile.create({
       data: {
         judul_profile: payload.judul_profile,
         tanggal_publish: new Date(payload.tanggal_publish),
@@ -54,15 +70,16 @@ export async function POST(req: NextRequest) {
         jenis_berita: payload.jenis_berita,
         id_kategori: Number(payload.id_kategori),
         isi: payload.isi,
-        gambar_url,
+        media_url,
+        media_type,
       },
     });
 
-    return NextResponse.json(hero, { status: 201 });
+    return NextResponse.json(result, { status: 201 });
   } catch (err) {
-    console.error("❌ Error POST:", err);
+    console.error(err);
     return NextResponse.json(
-      { error: "Terjadi kesalahan saat menyimpan data" },
+      { error: "Terjadi kesalahan server" },
       { status: 500 }
     );
   }
@@ -71,13 +88,19 @@ export async function POST(req: NextRequest) {
 // ============================
 // 📥 GET — Ambil Semua Data
 // ============================
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const heroes = await prisma.profile.findMany({
+    const { searchParams } = new URL(req.url);
+    const kategori = searchParams.get("kategori");
+
+    const whereClause = kategori ? { id_kategori: Number(kategori) } : {};
+
+    const data = await prisma.profile.findMany({
+      where: whereClause,
       orderBy: { id: "desc" },
     });
 
-    return NextResponse.json(heroes, { status: 200 });
+    return NextResponse.json(data, { status: 200 });
   } catch (err) {
     console.error("❌ Error GET:", err);
     return NextResponse.json(
@@ -92,8 +115,8 @@ export async function GET() {
 // ============================
 export async function DELETE(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
+    const id = new URL(req.url).searchParams.get("id");
+
     if (!id) {
       return NextResponse.json(
         { error: "ID tidak ditemukan" },
@@ -101,9 +124,7 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    await prisma.profile.delete({
-      where: { id: Number(id) },
-    });
+    await prisma.profile.delete({ where: { id: Number(id) } });
 
     return NextResponse.json(
       { message: "Data berhasil dihapus" },
@@ -119,16 +140,15 @@ export async function DELETE(req: NextRequest) {
 }
 
 // ============================
-// ✏️ PUT — Update Data Profile
+// ✏️ PUT — Update Profile
 // ============================
 export async function PUT(req: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get("id");
+    const id = new URL(req.url).searchParams.get("id");
 
     if (!id) {
       return NextResponse.json(
-        { error: "ID tidak ditemukan di parameter URL" },
+        { error: "ID tidak ditemukan" },
         { status: 400 }
       );
     }
@@ -136,30 +156,39 @@ export async function PUT(req: NextRequest) {
     const formData = await req.formData();
 
     const payload: ProfilePayload = {
-      judul_profile: formData.get("judul_profile") as string,
-      tanggal_publish: formData.get("tanggal_publish") as string,
-      jam_publish: formData.get("jam_publish") as string,
-      jenis_berita: formData.get("jenis_berita") as string,
-      id_kategori: formData.get("id_kategori") as string,
-      isi: (formData.get("isi") as string) ?? "",
+      judul_profile: String(formData.get("judul_profile")),
+      tanggal_publish: String(formData.get("tanggal_publish")),
+      jam_publish: String(formData.get("jam_publish")),
+      jenis_berita: String(formData.get("jenis_berita")),
+      id_kategori: String(formData.get("id_kategori")),
+      isi: String(formData.get("isi")),
     };
 
-    // 🖼️ Handle gambar (opsional)
-    const gambar = formData.get("gambar") as File | null;
-    let gambar_url: string | null = null;
+    // handle upload baru
+    const file = formData.get("gambar") as File | null;
 
-    if (gambar && gambar.size > 0) {
-      const bytes = await gambar.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const uploadDir = path.join(process.cwd(), "public/uploads");
+    let media_url: string | null = null;
+    let media_type: string | null = null;
 
+    if (file && file.size > 0) {
+      const mime = file.type;
+
+      const uploadDir = path.join(process.cwd(), "public/uploads/profile");
       await mkdir(uploadDir, { recursive: true });
-      const filePath = path.join(uploadDir, gambar.name);
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+
+      const safeName = file.name.replace(/\s+/g, "_");
+      const fileName = `${Date.now()}_${safeName}`;
+
+      const filePath = path.join(uploadDir, fileName);
+
       await writeFile(filePath, buffer);
-      gambar_url = `/uploads/${gambar.name}`;
+
+      media_url = `/uploads/profile/${fileName}`;
+      media_type = mime.startsWith("video/") ? "video" : "image";
     }
 
-    // 🔄 Update data di Prisma
     const updated = await prisma.profile.update({
       where: { id: Number(id) },
       data: {
@@ -169,7 +198,8 @@ export async function PUT(req: NextRequest) {
         jenis_berita: payload.jenis_berita,
         id_kategori: Number(payload.id_kategori),
         isi: payload.isi,
-        ...(gambar_url && { gambar_url }), // hanya update gambar jika baru
+        ...(media_url && { media_url }),
+        ...(media_type && { media_type }),
       },
     });
 

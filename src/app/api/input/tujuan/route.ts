@@ -18,24 +18,34 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
 
+    const judul_tujuan = formData.get("judul_tujuan");
+    const tanggal_publish = formData.get("tanggal_publish");
+    const jam_publish = formData.get("jam_publish");
+    const jenis_berita = formData.get("jenis_berita");
+    const id_kategori = formData.get("id_kategori");
+    const isi = formData.get("isi");
+
     const payload: TujuanPayload = {
-      judul_tujuan: formData.get("judul_tujuan") as string,
-      tanggal_publish: formData.get("tanggal_publish") as string,
-      jam_publish: formData.get("jam_publish") as string,
-      jenis_berita: formData.get("jenis_berita") as string,
-      id_kategori: formData.get("id_kategori") as string,
-      isi: (formData.get("isi") as string) ?? "",
+      judul_tujuan: (judul_tujuan instanceof File ? "" : judul_tujuan) ?? "",
+      tanggal_publish:
+        (tanggal_publish instanceof File ? "" : tanggal_publish) ?? "",
+      jam_publish: (jam_publish instanceof File ? "" : jam_publish) ?? "",
+      jenis_berita: (jenis_berita instanceof File ? "" : jenis_berita) ?? "",
+      id_kategori: (id_kategori instanceof File ? "" : id_kategori) ?? "",
+      isi: (isi instanceof File ? "" : isi) ?? "",
     };
 
-    const gambar = formData.get("gambar") as File | null;
+    // Gambar optional
+    const file = formData.get("gambar");
+    const gambar = file instanceof File ? file : null;
+
     let gambar_url: string | null = null;
 
-    if (gambar) {
+    if (gambar && gambar.size > 0) {
       const bytes = await gambar.arrayBuffer();
       const buffer = Buffer.from(bytes);
       const uploadDir = path.join(process.cwd(), "public/uploads");
 
-      // Simpan file
       await writeFile(path.join(uploadDir, gambar.name), buffer);
       gambar_url = `/uploads/${gambar.name}`;
     }
@@ -48,7 +58,7 @@ export async function POST(req: NextRequest) {
         jenis_berita: payload.jenis_berita,
         id_kategori: Number(payload.id_kategori),
         isi: payload.isi,
-        gambar_url,
+        gambar_url, // bisa null
       },
     });
 
@@ -62,16 +72,23 @@ export async function POST(req: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const heroes = await prisma.tujuan.findMany({
+    const { searchParams } = new URL(req.url);
+    const kategori = searchParams.get("kategori");
+
+    const whereClause = kategori ? { id_kategori: Number(kategori) } : {};
+
+    const data = await prisma.tujuan.findMany({
+      where: whereClause,
       orderBy: { id: "desc" },
     });
-    return NextResponse.json(heroes, { status: 200 });
+
+    return NextResponse.json(data, { status: 200 });
   } catch (err) {
     console.error("❌ Error GET:", err);
     return NextResponse.json(
-      { error: "Gagal mengambil data Hero Section" },
+      { error: "Gagal mengambil data Profile" },
       { status: 500 }
     );
   }

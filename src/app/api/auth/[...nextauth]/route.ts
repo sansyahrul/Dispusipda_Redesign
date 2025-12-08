@@ -24,22 +24,19 @@ const handler = NextAuth({
       async authorize(credentials): Promise<AppUser | null> {
         if (!credentials?.email || !credentials.password) return null;
 
-        // 🔍 Cek user berdasarkan email
         const user = await prisma.user.findUnique({
           where: { email: credentials.email },
         });
 
-        if (!user) return null; // email tidak ditemukan
+        if (!user) return null;
 
-        // 🔐 Cek password (hashed)
         const isPasswordValid = await bcrypt.compare(
           credentials.password,
           user.password
         );
 
-        if (!isPasswordValid) return null; // password salah
+        if (!isPasswordValid) return null;
 
-        // ⬅️ Return data user
         return {
           id: String(user.id),
           name: user.name,

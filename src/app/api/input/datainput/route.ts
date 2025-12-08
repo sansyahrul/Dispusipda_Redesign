@@ -53,7 +53,7 @@ export async function GET() {
         jam_publish: item.jam_publish,
         jenis_berita: item.jenis_berita,
         id_kategori: item.id_kategori,
-        gambar_url: item.gambar_url,
+        media_url: item.media_url,
         isi: item.isi,
         sumber: "Profile",
       })),

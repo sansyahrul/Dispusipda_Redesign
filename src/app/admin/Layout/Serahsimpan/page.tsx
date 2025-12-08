@@ -4,6 +4,7 @@ import React, { useEffect, useState, ChangeEvent } from "react";
 import Sidebar from "../../component/sidebar";
 import { BarChart3 } from "lucide-react";
 import SerahsimpanChart from "../../component/chartserahsimpan";
+import { groupByTahun } from "@/utils/GroupbyTahun";
 
 interface Serahsimpan {
   id: number;
@@ -11,7 +12,10 @@ interface Serahsimpan {
   createdAt: string;
 }
 
-export type StatistikChartData = Record<string, string | number>;
+export interface StatistikChartData {
+  Tahun: string;
+  [key: string]: number | string;
+}
 
 export default function StatistikImportPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -31,27 +35,17 @@ export default function StatistikImportPage() {
         const cols = Object.keys(firstRow);
         setHeaders(cols);
 
-        const formatted = result.map((item) => {
-          const row: StatistikChartData = {};
-          cols.forEach((key) => {
-            const value = item.data[key];
-            row[key] =
-              typeof value === "number" || !isNaN(Number(value))
-                ? Number(value)
-                : String(value ?? "");
-          });
-          return row;
-        });
+        const groupedData = groupByTahun(result, cols);
 
         setData(result);
-        setChartData(formatted);
+        setChartData(groupedData);
       } else {
         setData([]);
         setHeaders([]);
         setChartData([]);
       }
     } catch (err) {
-      console.error("❌ Gagal fetch data:", err);
+      console.error(err);
     }
   };
 

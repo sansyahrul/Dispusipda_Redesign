@@ -19,7 +19,19 @@ interface StatistikChartProps {
 export default function StatistikChart({ data }: StatistikChartProps) {
   if (!data || data.length === 0) {
     return (
-      <div className="flex items-center justify-center w-full h-full text-gray-500 text-sm border border-dashed border-gray-300 rounded-lg">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          width: "100%",
+          height: "100%",
+          color: "#6b7280",
+          border: "1px dashed #d1d5db",
+          borderRadius: "8px",
+          fontSize: "14px",
+        }}
+      >
         Belum ada data untuk ditampilkan.
       </div>
     );
@@ -33,9 +45,9 @@ export default function StatistikChart({ data }: StatistikChartProps) {
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-        <XAxis dataKey={xKey} tick={{ fontSize: 12 }} />
-        <YAxis tick={{ fontSize: 12 }} />
+        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+        <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: "#374151" }} />
+        <YAxis tick={{ fontSize: 12, fill: "#374151" }} />
         <Tooltip />
         <Legend />
 

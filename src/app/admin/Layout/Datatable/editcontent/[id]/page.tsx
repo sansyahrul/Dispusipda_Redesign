@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, ChangeEvent, FormEvent } from "react";
+import Swal from "sweetalert2";
 import { useParams, useRouter } from "next/navigation";
 import Sidebar from "@/app/admin/component/sidebar";
 import { kategoriDummy } from "../../const/kategoridummy";
@@ -19,7 +20,7 @@ type FormDataType = {
   gambar: File | null;
   video: File | null;
   dokumen: File | null;
-  youtube_url: string;
+  youtube_link: string;
 };
 
 type Option = { value: string; label: string };
@@ -29,6 +30,8 @@ export default function EditContentForm() {
   const router = useRouter();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const [formData, setFormData] = useState<FormDataType>({
     judul_berita: "",
     icon: "",
@@ -46,44 +49,48 @@ export default function EditContentForm() {
     gambar: null,
     video: null,
     dokumen: null,
-    youtube_url: "",
+    youtube_link: "",
   });
 
+  /* ============================================
+    LOAD DATA EXISTING
+  ============================================ */
   useEffect(() => {
     const fetchData = async () => {
       if (!id) return;
+
       const res = await fetch(`/api/content/${id}`);
       if (!res.ok) {
-        alert("Gagal memuat data.");
+        Swal.fire("Gagal", "Gagal memuat data", "error");
         return;
       }
 
       const data = await res.json();
+
       setFormData((prev) => ({
         ...prev,
         judul_berita: data.judul_berita ?? "",
         icon: data.icon ?? "",
         tanggal_publish: data.tanggal_publish
           ? new Date(data.tanggal_publish).toISOString().slice(0, 10)
-          : new Date().toISOString().slice(0, 10),
-        jam_publish:
-          data.jam_publish ??
-          new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          }),
+          : prev.tanggal_publish,
+        jam_publish: data.jam_publish ?? prev.jam_publish,
         status_berita: data.status_berita ?? "Publish",
         jenis_berita: data.jenis_berita ?? "Berita",
         id_kategori: data.id_kategori ? String(data.id_kategori) : "1",
         urutan: data.urutan ?? 1,
         keywords: data.keywords ?? "",
         isi: data.isi ?? "",
-        youtube_url: data.youtube_url ?? "",
+        youtube_link: data.youtube_link ?? "",
       }));
     };
+
     fetchData();
   }, [id]);
 
+  /* ============================================
+    HANDLERS
+  ============================================ */
   const handleChange = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
@@ -93,13 +100,20 @@ export default function EditContentForm() {
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, files } = e.target;
-    const file = files && files.length > 0 ? files[0] : null;
-    setFormData((prev) => ({ ...prev, [name]: file }));
+    setFormData((prev) => ({
+      ...prev,
+      [name]: files && files.length > 0 ? files[0] : null,
+    }));
   };
 
+  /* ============================================
+    SUBMIT UPDATE
+  ============================================ */
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!id) return;
+
+    setLoading(true);
 
     const form = new FormData();
     (Object.keys(formData) as Array<keyof FormDataType>).forEach((key) => {
@@ -113,23 +127,31 @@ export default function EditContentForm() {
         method: "PUT",
         body: form,
       });
+
       if (!res.ok) throw new Error("Update gagal");
 
-      alert("✅ Data berhasil diperbarui!");
+      await Swal.fire({
+        title: "Berhasil!",
+        text: "Konten berhasil diperbarui 🎉",
+        icon: "success",
+        confirmButtonColor: "#2563eb",
+      });
+
       router.push("/admin/Layout/Datatable");
     } catch (err) {
-      console.error(err);
-      alert("❌ Terjadi kesalahan saat update.");
+      Swal.fire("Gagal", "Terjadi kesalahan saat update", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen ">
+    <div className="flex min-h-screen">
       <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
       <main className="flex-1 p-8">
         <div className="mb-6">
-          <h1 className="text-2xl dashboard-title">Data Konten</h1>
+          <h1 className="text-2xl dashboard-title">Edit Konten</h1>
         </div>
 
         <div
@@ -137,7 +159,7 @@ export default function EditContentForm() {
           style={{ backgroundColor: "#F9FCFF", borderColor: "#C9D4E1" }}
         >
           <h2 className="text-xl dashboard-title mb-4">
-            Edit Berita / Profil/ Layanan
+            Edit Berita / Profil / Layanan
           </h2>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -149,7 +171,8 @@ export default function EditContentForm() {
                 type="text"
                 value={formData.judul_berita}
                 onChange={handleChange}
-                placeholder="Wawacan Lampahing Wali Kabeh"
+                placeholder="Masukkan judul konten..."
+                required
               />
               <InputField
                 label="Icon"
@@ -157,10 +180,11 @@ export default function EditContentForm() {
                 type="text"
                 value={formData.icon}
                 onChange={handleChange}
+                placeholder="Contoh: file-text"
               />
             </div>
 
-            {/* Tanggal & Jam Publish */}
+            {/* Tanggal & Jam */}
             <div className="grid md:grid-cols-2 gap-6">
               <InputField
                 label="Tanggal Publish"
@@ -169,20 +193,13 @@ export default function EditContentForm() {
                 value={formData.tanggal_publish}
                 onChange={handleChange}
               />
-              <div>
-                <label className="block mb-2 text-sm text-gray-600">
-                  Jam Publish
-                </label>
-                <div className="relative">
-                  <input
-                    type="time"
-                    name="jam_publish"
-                    value={formData.jam_publish}
-                    onChange={handleChange}
-                    className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
+              <InputField
+                label="Jam Publish"
+                name="jam_publish"
+                type="time"
+                value={formData.jam_publish}
+                onChange={handleChange}
+              />
             </div>
 
             {/* Status, Jenis, Kategori */}
@@ -194,9 +211,10 @@ export default function EditContentForm() {
                 onChange={handleChange}
                 options={[
                   { value: "Publish", label: "Publikasikan" },
-                  { value: "Draft", label: "Simpan sebagai draft" },
+                  { value: "Draft", label: "Simpan sebagai Draft" },
                 ]}
               />
+
               <SelectField
                 label="Jenis"
                 name="jenis_berita"
@@ -209,8 +227,10 @@ export default function EditContentForm() {
                   { value: "Gambar", label: "Gambar" },
                   { value: "Video", label: "Video" },
                   { value: "PDF", label: "PDF" },
+                  { value: "HTML", label: "HTML (ZIP)" },
                 ]}
               />
+
               <SelectField
                 label="Kategori"
                 name="id_kategori"
@@ -220,7 +240,7 @@ export default function EditContentForm() {
               />
             </div>
 
-            {/* Urutan */}
+            {/* Urutan + File */}
             <div className="grid md:grid-cols-3 gap-6">
               <InputField
                 label="Urutan"
@@ -230,7 +250,6 @@ export default function EditContentForm() {
                 onChange={handleChange}
               />
 
-              {/* Upload Gambar */}
               {formData.jenis_berita === "Gambar" && (
                 <FileField
                   label="Upload Gambar"
@@ -240,7 +259,6 @@ export default function EditContentForm() {
                 />
               )}
 
-              {/* Upload Video */}
               {formData.jenis_berita === "Video" && (
                 <FileField
                   label="Upload Video"
@@ -251,7 +269,6 @@ export default function EditContentForm() {
               )}
             </div>
 
-            {/* Upload Dokumen (Full Width) */}
             {formData.jenis_berita === "PDF" && (
               <FileField
                 label="Upload Dokumen (PDF)"
@@ -261,28 +278,36 @@ export default function EditContentForm() {
               />
             )}
 
-            {/* YouTube URL */}
-            {formData.jenis_berita === "Youtube" && (
-              <InputField
-                label="Link YouTube"
-                name="youtube_url"
-                type="text"
-                value={formData.youtube_url}
-                onChange={handleChange}
+            {formData.jenis_berita === "HTML" && (
+              <FileField
+                label="Upload File ZIP (HTML)"
+                name="dokumen"
+                accept=".zip"
+                onChange={handleFileChange}
               />
             )}
 
-            {/* Keywords */}
+            {formData.jenis_berita === "Youtube" && (
+              <InputField
+                label="Link YouTube"
+                name="youtube_link"
+                type="text"
+                value={formData.youtube_link}
+                onChange={handleChange}
+                placeholder="Masukkan URL YouTube..."
+              />
+            )}
+
+            {/* Keywords & Isi */}
             <TextAreaField
               label="Keywords"
               name="keywords"
               value={formData.keywords}
               onChange={handleChange}
-              placeholder="KID"
               rows={3}
+              placeholder="Masukkan keyword..."
             />
 
-            {/* Isi Berita */}
             <TextAreaField
               label="Isi Berita"
               name="isi"
@@ -294,19 +319,20 @@ export default function EditContentForm() {
             {/* Buttons */}
             <div className="flex justify-end gap-4 pt-4">
               <button
-                type="submit"
-                className="px-8 py-2.5 bg-blue-900 text-white rounded-md hover:bg-blue-950 transition-colors font-medium"
-                style={{ backgroundColor: "#154D71" }}
-              >
-                Save
-              </button>
-              <button
                 type="button"
                 onClick={() => router.push("/admin/Layout/Datatable")}
+                className="px-8 py-2.5 bg-gray-300 text-slate-800 rounded-md hover:bg-gray-400 transition-colors font-medium"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                disabled={loading}
                 className="px-8 py-2.5 bg-blue-900 text-white rounded-md hover:bg-blue-950 transition-colors font-medium"
                 style={{ backgroundColor: "#154D71" }}
               >
-                Cancel
+                {loading ? "Menyimpan..." : "Simpan Perubahan"}
               </button>
             </div>
           </form>
@@ -316,7 +342,10 @@ export default function EditContentForm() {
   );
 }
 
-/* Komponen Reusable */
+/* =====================================================
+    REUSABLE COMPONENTS
+===================================================== */
+
 interface InputFieldProps {
   label: string;
   name: keyof FormDataType;
@@ -324,7 +353,9 @@ interface InputFieldProps {
   value: string | number;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
+  required?: boolean;
 }
+
 function InputField({
   label,
   name,
@@ -332,6 +363,7 @@ function InputField({
   value,
   onChange,
   placeholder,
+  required,
 }: InputFieldProps) {
   return (
     <div>
@@ -340,9 +372,10 @@ function InputField({
         type={type}
         name={name}
         value={value}
-        onChange={onChange}
+        required={required}
         placeholder={placeholder}
-        className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        onChange={onChange}
+        className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none"
       />
     </div>
   );
@@ -355,6 +388,7 @@ interface SelectFieldProps {
   onChange: (e: ChangeEvent<HTMLSelectElement>) => void;
   options: Option[];
 }
+
 function SelectField({
   label,
   name,
@@ -369,14 +403,7 @@ function SelectField({
         name={name}
         value={value}
         onChange={onChange}
-        className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none bg-white"
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236B7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E")`,
-          backgroundPosition: "right 0.5rem center",
-          backgroundRepeat: "no-repeat",
-          backgroundSize: "1.5em 1.5em",
-          paddingRight: "2.5rem",
-        }}
+        className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none bg-white"
       >
         {options.map((opt) => (
           <option key={opt.value} value={opt.value}>
@@ -393,16 +420,16 @@ interface TextAreaFieldProps {
   name: keyof FormDataType;
   value: string;
   onChange: (e: ChangeEvent<HTMLTextAreaElement>) => void;
-  rows?: number;
   placeholder?: string;
+  rows?: number;
 }
 function TextAreaField({
   label,
   name,
   value,
   onChange,
-  rows = 4,
   placeholder,
+  rows = 4,
 }: TextAreaFieldProps) {
   return (
     <div>
@@ -411,9 +438,9 @@ function TextAreaField({
         name={name}
         value={value}
         onChange={onChange}
-        rows={rows}
         placeholder={placeholder}
-        className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+        rows={rows}
+        className="w-full border border-gray-300 rounded-md px-4 py-2.5 focus:ring-2 focus:ring-blue-500 outline-none resize-none"
       />
     </div>
   );
@@ -425,6 +452,7 @@ interface FileFieldProps {
   accept?: string;
   onChange: (e: ChangeEvent<HTMLInputElement>) => void;
 }
+
 function FileField({ label, name, accept, onChange }: FileFieldProps) {
   return (
     <div>
@@ -434,7 +462,7 @@ function FileField({ label, name, accept, onChange }: FileFieldProps) {
         name={name}
         accept={accept}
         onChange={onChange}
-        className="w-full border border-gray-300 rounded-md px-4 py-2 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:bg-gray-50 file:text-gray-700 hover:file:bg-gray-100"
+        className="w-full border border-gray-300 rounded-md px-4 py-2 text-sm text-gray-500 file:bg-gray-50 file:px-4 file:py-2 file:rounded-md file:border-0 hover:file:bg-gray-100"
       />
     </div>
   );

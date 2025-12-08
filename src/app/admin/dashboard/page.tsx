@@ -9,6 +9,8 @@ import { useState, useEffect } from "react";
 import { StatistikImport } from "../Layout/Statistik/types/statistik";
 import SerahsimpanChart from "../component/chartserahsimpan";
 import DashboardStats from "../component/stats";
+import { groupByTahun } from "@/utils/GroupbyTahun";
+import { convertToSerahsimpan } from "@/utils/convertToSerahsimpan";
 
 export type StatistikChartData = Record<string, string | number>;
 
@@ -20,55 +22,31 @@ export default function DashboardPage() {
   );
   const [loading, setLoading] = useState(true);
 
-  const fetchKoleksiData = async (): Promise<void> => {
-    try {
-      const res = await fetch("/api/Statistik/data", { cache: "no-store" });
-      if (!res.ok) throw new Error("Gagal fetch data koleksi");
-      const result: StatistikImport[] = await res.json();
-      if (Array.isArray(result) && result.length > 0) {
-        const headers = Object.keys(result[0].data);
-        const formatted: StatistikChartData[] = result.map((item) => {
-          const mapped: StatistikChartData = {};
-          headers.forEach((header) => {
-            const value = item.data[header];
-            mapped[header] =
-              typeof value === "number" || !isNaN(Number(value))
-                ? Number(value)
-                : String(value);
-          });
-          return mapped;
-        });
-        setKoleksiData(formatted);
-      } else setKoleksiData([]);
-    } catch (err) {
-      console.error("❌ Gagal fetch data koleksi:", err);
-      setKoleksiData([]);
+  const fetchKoleksiData = async () => {
+    const res = await fetch("/api/Statistik/data", { cache: "no-store" });
+    const result: StatistikImport[] = await res.json();
+
+    if (result.length > 0) {
+      const headers = Object.keys(result[0].data);
+
+      const properData = convertToSerahsimpan(result);
+      const grouped = groupByTahun(properData, headers);
+
+      setKoleksiData(grouped);
     }
   };
 
-  const fetchSerahsimpanData = async (): Promise<void> => {
-    try {
-      const res = await fetch("/api/Serahsimpan/data", { cache: "no-store" });
-      if (!res.ok) throw new Error("Gagal fetch data serah simpan");
-      const result: StatistikImport[] = await res.json();
-      if (Array.isArray(result) && result.length > 0) {
-        const headers = Object.keys(result[0].data);
-        const formatted: StatistikChartData[] = result.map((item) => {
-          const mapped: StatistikChartData = {};
-          headers.forEach((header) => {
-            const value = item.data[header];
-            mapped[header] =
-              typeof value === "number" || !isNaN(Number(value))
-                ? Number(value)
-                : String(value);
-          });
-          return mapped;
-        });
-        setSerahsimpanData(formatted);
-      } else setSerahsimpanData([]);
-    } catch (err) {
-      console.error("❌ Gagal fetch data serah simpan:", err);
-      setSerahsimpanData([]);
+  const fetchSerahsimpanData = async () => {
+    const res = await fetch("/api/Statistik/data", { cache: "no-store" });
+    const result: StatistikImport[] = await res.json();
+
+    if (result.length > 0) {
+      const headers = Object.keys(result[0].data);
+
+      const properData = convertToSerahsimpan(result);
+      const grouped = groupByTahun(properData, headers);
+
+      setSerahsimpanData(grouped);
     }
   };
 

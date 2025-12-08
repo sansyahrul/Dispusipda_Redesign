@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { NextRequest } from "next/server";
 import { writeFile } from "fs/promises";
 import path from "path";
 import fs from "fs";
+import AdmZip from "adm-zip";
 
 interface ContentForm {
   judul_berita: string;
@@ -15,26 +17,29 @@ interface ContentForm {
   urutan: number;
   keywords: string;
   isi: string;
-  gambar?: File | null;
-  video?: File | null;
-  dokumen?: File | null;
+  gambar: File | Blob | null;
+  video: File | Blob | null;
+  dokumen: File | Blob | null;
   youtube_link: string;
 }
 
-async function saveFile(file: File | null): Promise<string | null> {
+function isFile(file: File | Blob | null): file is File {
+  return file !== null && typeof (file as File).name === "string";
+}
+
+async function saveFile(file: File | Blob | null): Promise<string | null> {
   if (!file) return null;
 
-  // Pastikan file valid
-  if (!(file instanceof File) || !("arrayBuffer" in file)) return null;
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
 
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
-
-  // Buat folder upload jika belum ada
   const uploadDir = path.join(process.cwd(), "public", "uploads");
   if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
-  const fileName = `${Date.now()}-${file.name}`;
+  const fileName = isFile(file)
+    ? `${Date.now()}-${file.name}`
+    : `file-${Date.now()}`;
+
   const filePath = path.join(uploadDir, fileName);
 
   await writeFile(filePath, buffer);
@@ -42,17 +47,53 @@ async function saveFile(file: File | null): Promise<string | null> {
   return `/uploads/${fileName}`;
 }
 
-export async function GET() {
+async function saveAndExtractZip(
+  file: File | Blob | null
+): Promise<string | null> {
+  if (!file || !isFile(file)) return null;
+
+  if (!file.name.endsWith(".zip")) return null;
+
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+
+  const baseDir = path.join(process.cwd(), "public", "uploads", "html");
+  if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
+
+  const zipName = `html-${Date.now()}.zip`;
+  const zipPath = path.join(baseDir, zipName);
+
+  await writeFile(zipPath, buffer);
+
+  const zip = new AdmZip(zipPath);
+  const extractDir = path.join(baseDir, `extracted-${Date.now()}`);
+  fs.mkdirSync(extractDir, { recursive: true });
+
+  zip.extractAllTo(extractDir, true);
+
+  const indexPath = path.join(extractDir, "index.html");
+  if (!fs.existsSync(indexPath)) return null;
+
+  return `/uploads/html/${path.basename(extractDir)}/index.html`;
+}
+
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const kategori = searchParams.get("kategori");
+
+    const whereClause = kategori ? { id_kategori: Number(kategori) } : {};
+
     const contents = await prisma.content.findMany({
-      orderBy: { createdAt: "desc" },
+      where: whereClause,
+      orderBy: { id: "desc" },
     });
 
-    return NextResponse.json(contents);
-  } catch (error) {
-    console.error("Error fetching content:", error);
+    return NextResponse.json(contents, { status: 200 });
+  } catch (err) {
+    console.error("❌ Error GET:", err);
     return NextResponse.json(
-      { error: "Gagal mengambil data content" },
+      { error: "Gagal mengambil data" },
       { status: 500 }
     );
   }
@@ -62,14 +103,12 @@ export async function POST(req: Request) {
   try {
     const formData = await req.formData();
 
-    // Fungsi bantu untuk ambil data form
     const getString = (key: string): string =>
       formData.get(key)?.toString().trim() ?? "";
 
     const getNumber = (key: string): number =>
       parseInt(formData.get(key)?.toString() ?? "0", 10);
 
-    // Ambil data dari form
     const contentData: ContentForm = {
       judul_berita: getString("judul_berita"),
       icon: getString("icon"),
@@ -84,25 +123,34 @@ export async function POST(req: Request) {
       keywords: getString("keywords"),
       isi: getString("isi"),
       youtube_link: getString("youtube_link"),
-      gambar: formData.get("gambar") as File | null,
-      video: formData.get("video") as File | null,
-      dokumen: formData.get("dokumen") as File | null,
+
+      // FIX utama — pastikan undefined menjadi NULL
+      gambar: (formData.get("gambar") ?? null) as File | Blob | null,
+      video: (formData.get("video") ?? null) as File | Blob | null,
+      dokumen: (formData.get("dokumen") ?? null) as File | Blob | null,
     };
 
-    // Upload file (skip kalau jenis berita = YouTube)
     const gambar_url =
-      contentData.jenis_berita !== "Youtube"
-        ? await saveFile(contentData.gambar ?? null)
+      contentData.jenis_berita === "Gambar"
+        ? await saveFile(contentData.gambar)
         : null;
 
     const video_url =
-      contentData.jenis_berita !== "Youtube"
-        ? await saveFile(contentData.video ?? null)
+      contentData.jenis_berita === "Video"
+        ? await saveFile(contentData.video)
         : null;
 
-    const dokumen_url = await saveFile(contentData.dokumen ?? null);
+    let dokumen_url: string | null = null;
 
-    // Simpan ke database Prisma
+    if (
+      isFile(contentData.dokumen) &&
+      contentData.dokumen.name.endsWith(".zip")
+    ) {
+      dokumen_url = await saveAndExtractZip(contentData.dokumen);
+    } else {
+      dokumen_url = await saveFile(contentData.dokumen);
+    }
+
     const content = await prisma.content.create({
       data: {
         judul_berita: contentData.judul_berita,
@@ -124,7 +172,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json(content);
   } catch (error) {
-    console.error("Error saat menyimpan content:", error);
+    console.error("❌ Error saat menyimpan content:", error);
     return NextResponse.json(
       { error: "Gagal menyimpan data content" },
       { status: 500 }

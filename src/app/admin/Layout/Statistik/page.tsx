@@ -4,6 +4,7 @@ import React, { useEffect, useState, ChangeEvent } from "react";
 import Sidebar from "../../component/sidebar";
 import { BarChart3 } from "lucide-react";
 import StatistikChart from "../../component/chart";
+import { groupByTahun } from "@/utils/GroupbyTahun";
 
 interface StatistikImport {
   id: number;
@@ -34,19 +35,10 @@ export default function StatistikImportPage() {
         const cols = Object.keys(firstRow);
         setHeaders(cols);
 
-        const formatted: StatistikChartData[] = result.map((item) => {
-          const row: StatistikChartData = {};
-          cols.forEach((key) => {
-            const value = item.data[key];
-            row[key] =
-              typeof value === "number" || !isNaN(Number(value))
-                ? Number(value)
-                : String(value ?? "");
-          });
-          return row;
-        });
+        const groupedData = groupByTahun(result, cols);
 
-        setChartData(formatted);
+        setData(result);
+        setChartData(groupedData);
       } else {
         setData([]);
         setHeaders([]);

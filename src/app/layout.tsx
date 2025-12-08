@@ -1,22 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { Plus_Jakarta_Sans } from "next/font/google";
-import "./globals.css";
+import FloatingAI from "@/components/Floatingai";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"], // sesuaikan kebutuhan
   variable: "--font-plus-jakarta", // optional: biar bisa dipakai di Tailwind
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
@@ -38,6 +29,8 @@ export default function RootLayout({
         className={`${plusJakarta.variable} ${plusJakarta.variable} antialiased`}
       >
         {children}
+        <FloatingAI />
+        {/* === Floating AI === */}
       </body>
     </html>
   );

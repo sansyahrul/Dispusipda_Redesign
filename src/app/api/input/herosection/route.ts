@@ -14,7 +14,6 @@ interface HeroSectionPayload {
   isi: string;
 }
 
-// 🟢 CREATE DATA (POST)
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
@@ -119,12 +118,18 @@ export async function PUT(req: NextRequest) {
   }
 }
 
-// 🟢 GET ALL DATA
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
+    const { searchParams } = new URL(req.url);
+    const kategori = searchParams.get("kategori");
+
+    const whereClause = kategori ? { id_kategori: Number(kategori) } : {};
+
     const heroes = await prisma.hero_section.findMany({
+      where: whereClause,
       orderBy: { id: "desc" },
     });
+
     return NextResponse.json(heroes, { status: 200 });
   } catch (err) {
     console.error("❌ Error GET:", err);

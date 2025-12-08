@@ -14,10 +14,8 @@ model User {
   email     String   @unique
   password  String
   createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt  // ✅ ini aman & auto-update
+  updatedAt DateTime @default(now()) @updatedAt  
 }
-
-
 
 
 model Content {
@@ -48,11 +46,13 @@ model profile {
   jenis_berita     String
   id_kategori      Int
   isi              String? @db.LongText
-  gambar_url       String?
+  media_url        String?   // bisa gambar atau video
+  media_type       String?   // image atau video (opsional)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
-
 }
+
+
 
 model hero_section {
   id               Int      @id @default(autoincrement())

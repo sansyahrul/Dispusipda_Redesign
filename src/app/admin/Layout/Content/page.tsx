@@ -180,8 +180,10 @@ export default function ContentForm() {
                   { value: "Gambar", label: "Gambar" },
                   { value: "Video", label: "Video" },
                   { value: "PDF", label: "PDF" },
+                  { value: "HTML", label: "HTML (File ZIP)" },
                 ]}
               />
+
               <SelectField
                 label="Kategori"
                 name="id_kategori"
@@ -217,6 +219,15 @@ export default function ContentForm() {
                 />
               )}
             </div>
+
+            {formData.jenis_berita === "HTML" && (
+              <FileField
+                label="Upload File ZIP (berisi HTML)"
+                name="dokumen"
+                accept=".zip"
+                onChange={handleFileChange}
+              />
+            )}
 
             {/* Dokumen PDF */}
             {formData.jenis_berita === "PDF" && (

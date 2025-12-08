@@ -315,9 +315,9 @@ export default function FormProfilePage() {
             </div>
 
             <FileField
-              label="Upload Gambar"
+              label="Upload Gambar atau Video"
               name="gambar"
-              accept="image/*"
+              accept="image/*,video/*"
               onChange={handleFileChange}
             />
 
@@ -488,10 +488,10 @@ export default function FormProfilePage() {
 
               {/* Upload Gambar */}
               <FileField
-                label="Ganti Gambar (opsional)"
+                label="Upload Gambar atau Video"
                 name="gambar"
-                accept="image/*"
-                onChange={handleEditFileChange}
+                accept="image/*,video/*"
+                onChange={handleFileChange}
               />
 
               {/* Isi Konten */}

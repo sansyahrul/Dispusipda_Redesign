@@ -31,7 +31,6 @@ export default function Datatable() {
   const [data, setData] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔥 Tambahan untuk alert hapus
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
   useEffect(() => {
@@ -286,7 +285,7 @@ export default function Datatable() {
 
                   {item.dokumen_url && (
                     <iframe
-                      src={item.dokumen_url}
+                      src={`${item.dokumen_url}#toolbar=0&navpanes=0&scrollbar=0`}
                       className="w-full h-64 border-t border-slate-200"
                     />
                   )}
